@@ -3,47 +3,52 @@ package main
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
-	pb "github.com/kogonia/protobuf_grpc/server/gen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+
+	"github.com/andrewz1/pbgrpc/mygrpc"
 )
 
+const (
+	target = "127.0.0.1:5300"
+	count  = 10000
+)
+
+type rclient struct {
+	cc *grpc.ClientConn
+	wg *sync.WaitGroup
+}
+
+func (c *rclient) run(n int) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer func() {
+		cancel()
+		c.wg.Done()
+	}()
+	cl := mygrpc.NewReverseClient(c.cc)
+	req := mygrpc.Request{Message: fmt.Sprintf("request %d", n)}
+	if _, err := cl.Do(ctx, &req, grpc.WaitForReady(true)); err != nil {
+		grpclog.Errorf("do: %v", err)
+	}
+}
+
 func main() {
-	count := 10000
-	wg := &sync.WaitGroup{}
+	cc, err := grpc.Dial(target, grpc.WithInsecure())
+	if err != nil {
+		grpclog.Fatalf("dial: %v", err)
+	}
+	var wg sync.WaitGroup
 	wg.Add(count)
-
+	rc := rclient{
+		cc: cc,
+		wg: &wg,
+	}
 	for i := 0; i < count; i++ {
-		id := strconv.Itoa(i)
-		go func(id string, wg *sync.WaitGroup) {
-			defer wg.Done()
-
-			opts := []grpc.DialOption{
-				grpc.WithInsecure(),
-				grpc.WithTimeout(time.Second),
-			}
-			conn, err := grpc.Dial("127.0.0.1:5300", opts...)
-			if err != nil {
-				grpclog.Fatalf("fail to dial: %v", err)
-			}
-			defer conn.Close()
-
-			client := pb.NewReverseClient(conn)
-			request := &pb.Request{
-				Message: id,
-			}
-			response, err := client.Do(context.Background(), request)
-
-			if err != nil {
-				grpclog.Fatalf("fail to dial: %v", err)
-			}
-			fmt.Printf("[%s]\t%s\n", id, response.Message)
-		}(id, wg)
+		go rc.run(i)
 	}
 	wg.Wait()
-	fmt.Println("Done")
+	grpclog.Infof("done")
 }

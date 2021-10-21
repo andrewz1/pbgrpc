@@ -1,38 +1,39 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"net"
 
-	pb "github.com/kogonia/protobuf_grpc/server/gen"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/peer"
+
+	"github.com/andrewz1/pbgrpc/mygrpc"
 )
-
-func main() {
-	listener, err := net.Listen("tcp", ":5300")
-
-	if err != nil {
-		grpclog.Fatalf("failed to listen: %v", err)
-	}
-	grpcServer := grpc.NewServer()
-
-	pb.RegisterReverseServer(grpcServer, &server{})
-	err = grpcServer.Serve(listener)
-	if err != nil {
-		grpclog.Fatalf("failed to serve grpcServer: %v", err)
-	}
-}
 
 type server struct{}
 
-func (s *server) Do(_ context.Context, request *pb.Request) (response *pb.Response, err error) {
-	fmt.Printf("request from %s\n", request.Message)
+func main() {
+	listener, err := net.Listen("tcp", ":5300")
+	if err != nil {
+		grpclog.Fatalf("listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
 
-	response = &pb.Response{
+	mygrpc.RegisterReverseServer(grpcServer, server{})
+
+	grpclog.Fatalf("serve: %v", grpcServer.Serve(listener))
+}
+
+func (s server) Do(ctx context.Context, req *mygrpc.Request) (rsp *mygrpc.Response, err error) {
+	if p, ok := peer.FromContext(ctx); ok {
+		grpclog.Infof("from: %v", p.Addr)
+	}
+	if req != nil {
+		grpclog.Infof("req: %v", req)
+	}
+	rsp = &mygrpc.Response{
 		Message: "200 OK",
 	}
-
-	return response, nil
+	return
 }

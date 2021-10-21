@@ -1,4 +1,4 @@
-module github.com/kogonia/protobuf_grpc/server/gen
+module github.com/andrewz1/pbgrpc
 
 go 1.17
 

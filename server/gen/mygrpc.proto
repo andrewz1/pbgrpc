@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package mygrpc;
+option go_package = "mygrpc";
+
+message Request {
+    string message = 1;
+}
+
+message Response {
+    string message = 1;
+}
+
+service Reverse {
+    rpc Do(Request) returns (Response) {}
+}

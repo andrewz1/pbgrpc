@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/grpclog"
 
 	"github.com/andrewz1/pbgrpc/mygrpc"
 )
@@ -31,14 +31,14 @@ func (c *rclient) run(n int) {
 	cl := mygrpc.NewReverseClient(c.cc)
 	req := mygrpc.Request{Message: fmt.Sprintf("request %d", n)}
 	if _, err := cl.Do(ctx, &req, grpc.WaitForReady(true)); err != nil {
-		grpclog.Errorf("do: %v", err)
+		log.Printf("do: %v\n", err)
 	}
 }
 
 func main() {
 	cc, err := grpc.Dial(target, grpc.WithInsecure())
 	if err != nil {
-		grpclog.Fatalf("dial: %v", err)
+		log.Printf("dial: %v\n", err)
 	}
 	var wg sync.WaitGroup
 	wg.Add(count)
@@ -50,5 +50,5 @@ func main() {
 		go rc.run(i)
 	}
 	wg.Wait()
-	grpclog.Infof("done")
+	log.Printf("done\n")
 }

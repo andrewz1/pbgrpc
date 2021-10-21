@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -13,13 +14,14 @@ import (
 )
 
 const (
-	target = "127.0.0.1:5300"
+	target = "10.0.10.200:5300"
 	count  = 10000
 )
 
 type rclient struct {
 	cc *grpc.ClientConn
 	wg *sync.WaitGroup
+	ee uint32
 }
 
 func (c *rclient) run(n int) {
@@ -32,6 +34,7 @@ func (c *rclient) run(n int) {
 	req := mygrpc.Request{Message: fmt.Sprintf("request %d", n)}
 	if _, err := cl.Do(ctx, &req, grpc.WaitForReady(true)); err != nil {
 		log.Printf("do: %v\n", err)
+		atomic.AddUint32(&c.ee, 1)
 	}
 }
 
@@ -50,5 +53,5 @@ func main() {
 		go rc.run(i)
 	}
 	wg.Wait()
-	log.Printf("done\n")
+	log.Printf("done, errors: %d\n", rc.ee)
 }

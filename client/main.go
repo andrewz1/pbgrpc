@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	target = "10.0.10.200:5300"
+	target = "10.0.10.100:5300"
 	count  = 10000
 )
 
